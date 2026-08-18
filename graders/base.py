@@ -3,7 +3,7 @@ from dmoj.utils.unicode import utf8bytes
 
 
 class BaseGrader:
-    def __init__(self, judge, problem, language, source):
+    def __init__(self, judge, problem, language, source, cosa):
         self.source = utf8bytes(source)
         self.language = language
         self.problem = problem
@@ -14,6 +14,7 @@ class BaseGrader:
         self._current_proc = None
         self._batch_counter = 0
         self._testcase_counter = 0
+        self.cosa = cosa
 
     def grade(self, case):
         raise NotImplementedError

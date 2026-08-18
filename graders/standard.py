@@ -63,6 +63,8 @@ class StandardGrader(BaseGrader):
         # checker is a `partial` object, NOT a `function` object
         if not result.result_flag or getattr(checker.func, 'run_on_error', False):
             try:
+                print("PROC OUTPUT BYTES: %s", repr(result.proc_output))
+                print("EXPECTED BYTES: %s", repr(case.output_data()))
                 check = checker(
                     result.proc_output,
                     case.output_data(),
@@ -76,6 +78,7 @@ class StandardGrader(BaseGrader):
                     execution_time=result.execution_time,
                     problem_id=self.problem.id,
                     result_flag=result.result_flag,
+                    cosa=self.cosa,
                 )
             except UnicodeDecodeError:
                 # Don't rely on problemsetters to do sane things when it comes to Unicode handling, so

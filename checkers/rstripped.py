@@ -17,8 +17,14 @@ def check(process_output: bytes, judge_output: bytes, **kwargs) -> bool:
     strexpected = '\n'.join(map(str, enjin))
     print(strexpected)
 
+
+
     #rescato el nom del fitxer i l'obro
-    myfile = open("/outputfiles/"+filename, "rb").read()
+    try:
+        myfile = open("/outputfiles/"+filename, "rb").read()
+    except:
+        return CheckerResult(False, 0, "El nom de fitxer que has enviat a l'output es invàlid o no has posat output")
+
     file_lines = resplit(b'[\r\n]', utf8bytes(myfile))
 
     #fitxer de l'usuari passat a caracters utf8
@@ -31,6 +37,7 @@ def check(process_output: bytes, judge_output: bytes, **kwargs) -> bool:
     print(judge_lines)
 
 
+    
     #pots esborrar ja el fitxer i que no ocupi memòria (no hi ha risc de fitxer de 3GB, perque donaria MLE)
     os.remove("/outputfiles/"+filename)
 

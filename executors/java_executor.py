@@ -25,7 +25,8 @@ JAVA_SANDBOX = os.path.abspath(os.path.join(os.path.dirname(__file__), 'java_san
 
 with open(os.path.join(os.path.dirname(__file__), 'java-security.policy'), 'r') as policy_file:
     policy = policy_file.read()
-    print("policy",policy,policy_file,JAVA_SANDBOX)
+    #print("policy",policy,policy_file,JAVA_SANDBOX)
+
 
 
 def find_class(source):
@@ -77,6 +78,13 @@ class JavaExecutor(CompiledExecutor):
 
     def get_security(self, launch_kwargs=None):
         return None
+    
+    def get_env(self):
+        env = super().get_env()
+        env['JAVA_TOOL_OPTIONS'] = '-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8'
+        print("ENV JAVA:", env)
+
+        return env
 
     def get_executable(self):
         return self.get_vm()
@@ -87,6 +95,7 @@ class JavaExecutor(CompiledExecutor):
             agent_flags += ',%s' % hint
         if self.unbuffered:
             agent_flags += ',nobuf'
+        agent_flags += ',unicode'
         # 128m is equivalent to 1<<27 in Thread constructor
         return [
             'java',
@@ -96,17 +105,35 @@ class JavaExecutor(CompiledExecutor):
             '-Xmx%dK' % self.__memory_limit,
             '-XX:+UseSerialGC',
             '-XX:ErrorFile=submission_jvm_crash.log',
+            '-Dfile.encoding=UTF-8',
+            '-Dsun.stdout.encoding=UTF-8',
+            '-Dsun.stderr.encoding=UTF-8',
+            '-Dstdout.encoding=UTF-8',
+            '-Dstderr.encoding=UTF-8',
             self._class_name,
         ]
 
     def launch(self, *args, **kwargs):
         self.__memory_limit = kwargs['memory']
         kwargs['memory'] = 0
+        print("llancant amb ",args,kwargs)
+        env = os.environ.copy()
+        env['LANG'] = 'en_US.UTF-8'
+        env['LC_ALL'] = 'en_US.UTF-8'
+        env['JAVA_TOOL_OPTIONS'] = '-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8'
         return super().launch(*args, **kwargs)
 
     def launch_unsafe(self, *args, **kwargs):
+        print("llancant unsafe amb ",args)
+        env = os.environ.copy()
+        env['JAVA_TOOL_OPTIONS'] = '-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8'
+
         return Popen(
-            ['java', self.get_vm_mode(), self._class_name] + list(args),
+            ['java', self.get_vm_mode(),
+            '-Dfile.encoding=UTF-8',
+            '-Dstdout.encoding=UTF-8',
+            '-Dstderr.encoding=UTF-8',
+            self._class_name] + list(args),
             executable=self.get_vm(),
             cwd=self._dir,
             **kwargs
@@ -234,7 +261,7 @@ class JavacExecutor(JavaExecutor):
                 fo.write(utf8bytes(source_code))
         except IOError as e:
             if e.errno in (errno.ENAMETOOLONG, errno.ENOENT, errno.EINVAL):
-                raise CompileError('Why do you need a class name so long? As a judge, I sentence your code to death.\n')
+                raise CompileError('Ets un psicopata. Rebutjo treballar amb psicopates.\n')
             raise
         self._class_name = class_name.group(1)
 
@@ -243,9 +270,9 @@ class JavacExecutor(JavaExecutor):
 
     def handle_compile_error(self, output):
         if b'symbol:   class Scanner' in utf8bytes(output):
-            raise CompileError('Te has olvidado de importar el Scanner. Has de copiar también todos los imports \n')
+            raise CompileError('Te has olvidado de importar el Scanner. Has de copiar tambien todos los imports \n')
         if b'is public, should be declared in a file named' in utf8bytes(output):
-            raise CompileError('Solo debe haber UNA clase pública. \n')
+            raise CompileError('Solo debe haber UNA clase publica. \n')
         raise CompileError(output)
 
     @classmethod

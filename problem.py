@@ -352,7 +352,8 @@ class TestCase:
             raise InvalidInitException('error loading checker: ' + str(e))
         if not hasattr(checker, 'check') or not callable(checker.check):
             raise InvalidInitException('malformed checker: no check method found')
-
+        print("si aixo te sentit aqui dira linecount "+name+" ")
+        print(params)
         return partial(checker.check, **params)
 
     def free_data(self):

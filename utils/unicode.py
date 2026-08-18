@@ -20,6 +20,13 @@ def utf8bytes(maybe_text):
         return maybe_text
     return maybe_text.encode('utf-8')
 
+def utf16bytes(maybe_text):
+    if maybe_text is None:
+        return None
+    if isinstance(maybe_text, bytes):
+        return maybe_text
+    return maybe_text.encode('utf-16')
+
 
 @overload
 def utf8text(maybe_bytes: AnyStr, errors='strict') -> str:

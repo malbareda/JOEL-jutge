@@ -80,7 +80,7 @@ class Judge:
         """
         self.updater_signal.set()
 
-    def _block_and_grade(self, problem, language, source, short_circuit, report=print):
+    def _block_and_grade(self, problem, language, cosa, source, short_circuit, report=print):
         if 'signature_grader' in problem.config:
             grader_class = graders.SignatureGrader
         elif 'interactive' in problem.config:
@@ -91,8 +91,9 @@ class Judge:
             grader_class = graders.StandardGrader
 
         try:
-            self.current_grader = grader_class(self, problem, language, utf8bytes(source))
+            self.current_grader = grader_class(self, problem, language, utf8bytes(source), cosa) ##TODO POTSER ESTA AQUI L'ARREGLO DELS ACCENTS?
         except CompileError as compilation_error:
+
             error = compilation_error.args[0] or b'compiler exited abnormally'
 
             report(ansi_style('#ansi[Failed compiling submission!](red|bold)'))
@@ -166,6 +167,7 @@ class Judge:
         id,
         problem_id,
         language,
+        cosa,
         source,
         time_limit,
         memory_limit,
@@ -173,6 +175,7 @@ class Judge:
         meta,
         report=print,
         blocking=False,
+        
     ):
         self.current_submission_id = id
 
@@ -185,7 +188,7 @@ class Judge:
 
             try:
                 problem = Problem(problem_id, time_limit, memory_limit, meta)
-                self._block_and_grade(problem, language, source, short_circuit, report=report)
+                self._block_and_grade(problem, language, cosa, source, short_circuit, report=report)
             except Exception:
                 self.log_internal_error()
 

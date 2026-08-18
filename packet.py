@@ -236,16 +236,19 @@ class PacketManager:
 
     def _receive_packet(self, packet: dict):
         name = packet['name']
+
         if name == 'ping':
             self.ping_packet(packet['when'])
         elif name == 'get-current-submission':
             self.current_submission_packet()
         elif name == 'submission-request':
+            print("he rebut algo amb "+str(packet['cosa']))
             self.submission_acknowledged_packet(packet['submission-id'])
             self.judge.begin_grading(
                 packet['submission-id'],
                 packet['problem-id'],
                 packet['language'],
+                packet['cosa'],
                 packet['source'],
                 float(packet['time-limit']),
                 int(packet['memory-limit']),

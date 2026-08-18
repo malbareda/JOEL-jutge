@@ -10,6 +10,7 @@ class Executor(ScriptExecutor):
     test_program = '{ print $0 }'
 
     def get_cmdline(self):
+        print("nose")
         return [self.get_command(), '-f', self._code]
 
     @classmethod

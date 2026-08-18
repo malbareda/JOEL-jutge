@@ -11,7 +11,7 @@ class Executor(JavaExecutor):
     ext = 'kt'
 
     compiler = 'kotlinc'
-    compiler_time_limit = 20
+    compiler_time_limit = 40
     vm = 'kotlin_vm'
     security_policy = policy
 

@@ -10,4 +10,6 @@ from dmoj.checkers import (
     sorted,
     standard,
     unordered,
+    sql,
+    mongo,
 )
