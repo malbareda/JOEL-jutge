@@ -2,6 +2,9 @@ grant {
     // Read/write to system streams
     permission java.lang.RuntimePermission "readFileDescriptor";
     permission java.lang.RuntimePermission "writeFileDescriptor";
+    // System.setOut/setErr/setIn: students use System.setOut(new PrintStream(System.out, true, UTF_8)) so that
+    // accented output comes out right. It only swaps this process's own streams.
+    permission java.lang.RuntimePermission "setIO";
 
     // Basic Threads
     permission java.lang.RuntimePermission "stopThread";
@@ -36,5 +39,10 @@ grant {
     permission java.io.FilePermission "/inputfiles/-", "read";
     permission java.io.FilePermission "/outputfiles/-", "write";
     permission java.io.FilePermission "in/-", "read";
-    permission java.io.FilePermission "out/-", "write";
+    permission java.io.FilePermission "out/-", "read,write";
+    // The folders themselves (not just what's inside), for file problems that do new File("out").exists() / mkdir().
+    permission java.io.FilePermission "in", "read";
+    permission java.io.FilePermission "out", "read,write";
+    permission java.io.FilePermission "/inputfiles", "read";
+    permission java.io.FilePermission "/outputfiles", "read,write";
 };

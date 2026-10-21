@@ -22,6 +22,11 @@ repackage = re.compile(r'\bpackage\s+([^.;]+(?:\.[^.;]+)*?);', re.U)
 reexception = re.compile(r'7257b50d-e37a-4664-b1a5-b1340b4206c0: (.*?)$', re.U | re.M)
 
 JAVA_SANDBOX = os.path.abspath(os.path.join(os.path.dirname(__file__), 'java_sandbox.jar'))
+# The 2019 DMOJ agent (this repo's commit 9e45a91): it reads the `policy:` option and installs a SecurityManager
+# with java-security.policy, which is what actually sandboxes the submission (get_security() below returns None,
+# i.e. no cptbox). The newer agent in java_sandbox.jar (swapped in for Java 25 in commit 3fb52a5) silently ignores
+# `policy:` and installs no SecurityManager at all, so Java 8/11 and Kotlin must keep using this one.
+JAVA_SANDBOX_LEGACY = os.path.abspath(os.path.join(os.path.dirname(__file__), 'java_sandbox_legacy.jar'))
 
 with open(os.path.join(os.path.dirname(__file__), 'java-security.policy'), 'r') as policy_file:
     policy = policy_file.read()
@@ -57,6 +62,7 @@ class JavaExecutor(CompiledExecutor):
 
     jvm_regex: Optional[str] = None
     security_policy = policy
+    agent_file = JAVA_SANDBOX_LEGACY  # see JAVA_SANDBOX_LEGACY; JAVA25 overrides it
 
     def __init__(self, problem_id, source_code, **kwargs):
         self._class_name = None
@@ -65,7 +71,7 @@ class JavaExecutor(CompiledExecutor):
     def create_files(self, problem_id, source_code, *args, **kwargs):
         super().create_files(problem_id, source_code, *args, **kwargs)
 
-        self._agent_file = JAVA_SANDBOX
+        self._agent_file = self.agent_file
         self._policy_file = self._file('security.policy')
         with open(self._policy_file, 'w') as file:
             file.write(self.security_policy)

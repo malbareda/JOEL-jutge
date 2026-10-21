@@ -42,6 +42,14 @@ import time
 import traceback
 from contextlib import contextmanager
 
+# The system SQLite on this server (Ubuntu 20.04) is 3.31.1, which lacks RIGHT/FULL OUTER JOIN (3.39),
+# UPDATE ... FROM (3.33), RETURNING (3.35)... pysqlite3-binary, installed in this virtualenv, bundles a
+# modern SQLite (3.51.1 when installed). Falls back to the system one if it is ever uninstalled.
+try:
+    import pysqlite3.dbapi2 as sqlite3
+except ImportError:
+    import sqlite3
+
 from dmoj.judgeenv import get_problem_root
 from dmoj.result import CheckerResult
 
@@ -238,16 +246,71 @@ def _first_keyword(sql_clean):
     return match.group(1) if match else ''
 
 
+_QUOTED_RE = re.compile(r"'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\"|`[^`]*`|\[[^\]]*\]")
+_INNERMOST_PARENS_RE = re.compile(r'\([^()]*\)')
+
+
+def _main_keyword(sql_clean):
+    """For a statement starting with WITH (common table expressions), the keyword of the statement
+    the CTEs are attached to: 'SELECT' for "WITH t AS (SELECT ...) SELECT * FROM t", but 'DELETE'
+    for "WITH t AS (...) DELETE FROM ...", which SQLite accepts too. Walks the WITH clause's own
+    structure (name [(columns)] AS [[NOT] MATERIALIZED] (body), ...) instead of looking for the
+    first keyword-looking word, since a CTE may be named like a keyword. For any other statement,
+    returns its first keyword. Returns '' if the WITH clause can't be parsed."""
+    first_word = _first_keyword(sql_clean)
+    if first_word != 'WITH':
+        return first_word
+    text = _QUOTED_RE.sub(' X ', sql_clean)
+    previous = None
+    while previous != text:  # drop every parenthesized group: column lists and CTE bodies
+        previous, text = text, _INNERMOST_PARENS_RE.sub(' ', text)
+    tokens = re.findall(r'[A-Z_][A-Z_0-9]*|,', text)
+    try:
+        i = 1
+        if tokens[i] == 'RECURSIVE':
+            i += 1
+        while True:
+            i += 1  # the CTE's name (its column list, if any, is already gone)
+            if tokens[i] != 'AS':
+                return ''
+            i += 1
+            while tokens[i] in ('NOT', 'MATERIALIZED'):
+                i += 1
+            if tokens[i] != ',':
+                return tokens[i]
+            i += 1
+    except IndexError:
+        return ''
+
+
 def _detect_statement_type(sql):
     """Returns 'SELECT', 'INSERT' or 'UPDATE' based on the leading keyword, or None if the
-    statement isn't one of those (used on the .out reference query to decide the grading mode)."""
-    first_word = _first_keyword(_clean_sql(sql))
+    statement isn't one of those (used on the .out reference query to decide the grading mode).
+    A WITH ... SELECT counts as a SELECT; WITH in front of anything else is not supported."""
+    sql_clean = _clean_sql(sql)
+    first_word = _first_keyword(sql_clean)
+    if first_word == 'WITH':
+        return 'SELECT' if _main_keyword(sql_clean) == 'SELECT' else None
     return first_word if first_word in _ALLOWED_STATEMENT_TYPES else None
 
 
 def _security_check(sql, allowed_type):
     sql_clean = _clean_sql(sql)
     first_word = _first_keyword(sql_clean)
+
+    if first_word == 'WITH':
+        # CTEs are only accepted in SELECT questions, whose connection is read-only anyway. In a
+        # write question (read-write throwaway copy) "WITH ... DELETE" would otherwise slip past the
+        # first-keyword blocklist below, so the statement the CTEs belong to is checked too.
+        main_word = _main_keyword(sql_clean)
+        if main_word in _ALWAYS_FORBIDDEN:
+            return SECURITY_VIOLATION_MARKER + ("This statement type is not allowed: WITH ... %s" % main_word)
+        if allowed_type != 'SELECT':
+            return "WITH (common table expressions) is only accepted in SELECT questions; " \
+                   "expected a %s statement" % allowed_type
+        if main_word != 'SELECT':
+            return "Expected a SELECT statement for this question, found: WITH ... %s" % (main_word or '(unparseable)')
+        first_word = 'SELECT'
 
     if first_word in _ALWAYS_FORBIDDEN:
         return SECURITY_VIOLATION_MARKER + ("This statement type is not allowed: %s" % first_word)
